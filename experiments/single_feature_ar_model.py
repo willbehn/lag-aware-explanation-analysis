@@ -1,4 +1,5 @@
 from ar_model import SingleFeatureARModel
+from window_shap import explain
 import numpy as np
 
 def main():
@@ -6,10 +7,12 @@ def main():
     length = 12
 
     rng = np.random.default_rng(123)
-    x = rng.normal(50, 12, length)
+    X = rng.normal(50, 12, length)
 
     ar_1 = SingleFeatureARModel(used_lags=used_lags)
-    print(ar_1.predict(x))
+
+    print(explain(ar_1,2,X))
+  
 
 
 if __name__ == "__main__":

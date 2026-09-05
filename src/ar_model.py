@@ -11,7 +11,9 @@ class SingleFeatureARModel:
     def __init__(self, used_lags: dict[int, float]):
         self._used_lags = used_lags 
 
-    def predict(self, series):
+        # declared lags = 
+
+    def predict(self, series) -> float:
         mean_avg = np.mean(series)
         delta = (1 - sum(self._used_lags.values())) * mean_avg
 
