@@ -12,7 +12,6 @@ def main():
 
     ar_1 = SingleFeatureARModel(used_lags=used_lags, X=X)
 
-
     window_sizes = {1,2,4,6,8,10,12}
     labels = [f"window {i}" for i in range(len(window_sizes))]
 

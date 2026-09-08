@@ -1,20 +1,20 @@
 import numpy as np
 import shap
+from itertools import product
 
-from ar_model import ARModel
+from ar_model import SingleFeatureARModel
+from ar_model import MultiFeatureARModel
 
 def split_data_in_windows(width: int, max_width: int) -> list[list[int]]:
     return [list(range(i, min(i + width, max_width))) for i in range(0, max_width, width)]
 
-# def shap_per_lag
-
 # SHAP paper 4.2, linear shap, true shap values can be calculated excact for linear models
-def shap_truth(used_lags: dict[int, float], series):
-    truth = np.zeros(len(series))
-    mean_avg = np.mean(series)
+def shap_truth(used_lags: dict[int, float], X):
+    truth = np.zeros(len(X))
+    mean_avg = np.mean(X)
 
     for k, w in used_lags.items():
-        truth[k - 1] = w * (series[k - 1] - mean_avg)
+        truth[k - 1] = w * (X[k - 1] - mean_avg)
 
     return truth
 
@@ -28,7 +28,12 @@ def shap_per_lag(windows, num_lags, shap_values) -> np.ndarray:
     return np.array(shap_per_lag)
 
 
-def explain(model: ARModel, window_width, X) -> tuple[list[list[int]], np.ndarray]:
+def explain(
+        model: SingleFeatureARModel,
+        window_width: int, 
+        X: np.ndarray
+        ) -> tuple[list[list[int]], np.ndarray]:
+    
     windows = split_data_in_windows(width=window_width, max_width=len(X))
 
     num_windows = len(windows)
@@ -42,7 +47,7 @@ def explain(model: ARModel, window_width, X) -> tuple[list[list[int]], np.ndarra
             v = X.copy()
 
             # feks (1, [0,1]) if window 0 is on, else (0, [0,1]) if its off
-            for on, win in zip (m, windows):
+            for on, win in zip(m, windows):
                 if not on: 
                     v[win] = baseline #TODO look into replacing with real data, not mean
 
@@ -56,3 +61,40 @@ def explain(model: ARModel, window_width, X) -> tuple[list[list[int]], np.ndarra
     return windows, np.array(shap_values).ravel()
 
 
+def explain_multi(
+        model: MultiFeatureARModel, 
+        window_width, X_multi: dict[str, np.ndarray], 
+        target: str
+        ) -> tuple[list[list[int]], np.ndarray]:
+   
+    # assumes that all features will have the same max width
+    windows = split_data_in_windows(width=window_width, max_width=len(next(iter(X_multi.values()))))
+    num_windows = len(windows)*len(X_multi)
+
+    baseline = {}
+
+    features = list(X_multi.keys())
+
+    for feat in features:
+        baseline[feat] = np.array(X_multi[feat]).mean()
+
+    def value_function(mask_matrix) -> np.ndarray:
+        # mask_matrix shape = (n, num_windows)
+        output = []
+        mask = np.atleast_2d(mask_matrix)
+
+        for m in mask:
+            v = {feat: X.copy() for feat, X in X_multi.items()}
+
+            for on, (feat, window) in zip(m, product(features, windows)):
+                if not on: 
+                    v[feat][window] = baseline[feat]
+
+            output.append(model.predict(v)[target])
+
+        return np.array(output)
+
+    explainer = shap.KernelExplainer(value_function, np.zeros((1, num_windows)))
+    shap_values = explainer.shap_values(np.ones(num_windows))
+
+    return windows, np.array(shap_values)

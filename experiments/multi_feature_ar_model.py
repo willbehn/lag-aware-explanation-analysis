@@ -1,7 +1,6 @@
 from ar_model import MultiFeatureARModel
-from window_shap import explain, shap_per_lag
+from window_shap import explain_multi, shap_truth
 import numpy as np
-import shap
 
 def main():
     features = ["feature_1", "feature_2"]
@@ -18,8 +17,12 @@ def main():
     }
 
     ar_model = MultiFeatureARModel(features=features, used_lags=used_lags, X=X)
-
     print(f"\nprediction: {ar_model.predict(X)}")
+
+    target = "feature_1"
+
+    print(explain_multi(ar_model, 1, X, target=target))
+    print(shap_truth(used_lags=used_lags[target], X=X[target]))
 
 if __name__ == "__main__":
     main()
