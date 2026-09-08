@@ -1,0 +1,12 @@
+[project]
+name = "lag-aware-explanation-analysis"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "numpy",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
