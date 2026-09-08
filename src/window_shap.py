@@ -1,6 +1,7 @@
 import numpy as np
 import shap
 
+from ar_model import ARModel
 
 def split_data_in_windows(width: int, max_width: int) -> list[list[int]]:
     return [list(range(i, min(i + width, max_width))) for i in range(0, max_width, width)]
@@ -27,7 +28,7 @@ def shap_per_lag(windows, num_lags, shap_values) -> np.ndarray:
     return np.array(shap_per_lag)
 
 
-def explain(model, window_width, X) -> tuple[list[list[int]], np.ndarray]:
+def explain(model: ARModel, window_width, X) -> tuple[list[list[int]], np.ndarray]:
     windows = split_data_in_windows(width=window_width, max_width=len(X))
 
     num_windows = len(windows)
