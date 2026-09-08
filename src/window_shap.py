@@ -17,6 +17,16 @@ def shap_truth(used_lags: dict[int, float], series):
 
     return truth
 
+# WindowSHAP paper formula 5, shap values can be projected to individual lags by dividing on the window size
+def shap_per_lag(windows, num_lags, shap_values) -> np.ndarray:
+    shap_per_lag = np.zeros(num_lags)
+
+    for window, sv in zip(windows, shap_values):
+        shap_per_lag[window] = sv/len(window)
+
+    return np.array(shap_per_lag)
+
+
 def explain(model, window_width, X) -> tuple[list[list[int]], np.ndarray]:
     windows = split_data_in_windows(width=window_width, max_width=len(X))
 

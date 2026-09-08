@@ -1,5 +1,5 @@
 from ar_model import SingleFeatureARModel
-from window_shap import explain
+from window_shap import explain, shap_per_lag
 import numpy as np
 import shap
 
@@ -18,10 +18,13 @@ def main():
 
     for win in window_sizes:
         print(f"window size {win}:")
-        win, shap_values = explain(ar_1,win,X)
+        windows, shap_values = explain(ar_1,win,X)
+        shap_pl = shap_per_lag(windows, len(X), shap_values)
         print(shap_values)
 
-        explanation = shap.Explanation(shap_values, feature_names=labels)
+        print(f"SHAP value per lag:\n {shap_pl}")
+
+        #explanation = shap.Explanation(shap_values, feature_names=labels)
         #shap.plots.bar(explanation)
   
 if __name__ == "__main__":
