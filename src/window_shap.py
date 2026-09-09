@@ -1,6 +1,7 @@
 import numpy as np
 import shap
 from itertools import product
+from sklearn.metrics import mean_squared_error
 
 from ar_model import SingleFeatureARModel
 from ar_model import MultiFeatureARModel
@@ -9,7 +10,7 @@ def split_data_in_windows(width: int, max_width: int) -> list[list[int]]:
     return [list(range(i, min(i + width, max_width))) for i in range(0, max_width, width)]
 
 # SHAP paper 4.2, linear shap, true shap values can be calculated excact for linear models
-def shap_truth(used_lags: dict[int, float], X):
+def shap_truth(used_lags: dict[int, float], X) -> np.ndarray:
     truth = np.zeros(len(X))
     mean_avg = np.mean(X)
 
@@ -20,13 +21,19 @@ def shap_truth(used_lags: dict[int, float], X):
 
 # WindowSHAP paper formula 5, shap values can be projected to individual lags by dividing on the window size
 def shap_per_lag(windows, num_lags, shap_values) -> np.ndarray:
-    shap_per_lag = np.zeros(num_lags)
+    lags = np.zeros(num_lags)
 
-    for window, sv in zip(windows, shap_values):
-        shap_per_lag[window] = sv/len(window)
+    for window, sv in zip(windows, shap_values, strict=True):
+        lags[window] = sv/len(window)
 
-    return np.array(shap_per_lag)
+    return np.array(lags)
 
+# MSE between true shap values per lag and the shap values per lag 
+# after explaining based on window size. TODO not normalized
+def attribution_mse(windows, shap_values, truth: np.ndarray) -> float:
+    shap_lags = shap_per_lag(windows=windows, num_lags=len(truth), shap_values=shap_values)
+
+    return mean_squared_error(y_true=truth, y_pred=shap_lags)
 
 def explain(
         model: SingleFeatureARModel,
@@ -69,7 +76,7 @@ def explain_multi(
    
     # assumes that all features will have the same max width
     windows = split_data_in_windows(width=window_width, max_width=len(next(iter(X_multi.values()))))
-    num_windows = len(windows)*len(X_multi)
+    num_players = len(windows)*len(X_multi)
 
     baseline = {}
 
@@ -94,7 +101,12 @@ def explain_multi(
 
         return np.array(output)
 
-    explainer = shap.KernelExplainer(value_function, np.zeros((1, num_windows)))
-    shap_values = explainer.shap_values(np.ones(num_windows))
+    explainer = shap.KernelExplainer(value_function, np.zeros((1, num_players)))
+    shap_values = explainer.shap_values(np.ones(num_players))
 
-    return windows, np.array(shap_values)
+    # Slices the shap_values to only contain the windows for target feature
+    target_start = features.index(target)*len(windows)
+    target_end = target_start + len(windows)
+    shap_values_target = shap_values[target_start : target_end] 
+
+    return windows, np.array(shap_values_target).ravel()

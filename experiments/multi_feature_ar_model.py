@@ -1,5 +1,5 @@
 from ar_model import MultiFeatureARModel
-from window_shap import explain_multi, shap_truth
+from window_shap import explain_multi, shap_truth, attribution_mse
 import numpy as np
 
 def main():
@@ -19,10 +19,18 @@ def main():
     ar_model = MultiFeatureARModel(features=features, used_lags=used_lags, X=X)
     print(f"\nprediction: {ar_model.predict(X)}")
 
-    target = "feature_1"
+    target = "feature_2"
 
-    print(explain_multi(ar_model, 1, X, target=target))
-    print(shap_truth(used_lags=used_lags[target], X=X[target]))
+    windows, shap_values = explain_multi(ar_model, 12, X, target=target)
+    truth = shap_truth(used_lags=used_lags[target], X=X[target])
+
+    print(f"windows: {windows}")
+    print(f"shap values: {shap_values}")
+    print(f"shap truth: {truth}")
+    print(f"mse: {attribution_mse(windows=windows, shap_values=shap_values, truth=truth)}")
+
+    #print(explain_multi(ar_model, 1, X, target=target))
+    #print(shap_truth(used_lags=used_lags[target], X=X[target]))
 
 if __name__ == "__main__":
     main()

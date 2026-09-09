@@ -6,6 +6,8 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "numpy",
+    "scikit-learn",
+    "shap",
 ]
 
 [tool.hatch.build.targets.wheel]
